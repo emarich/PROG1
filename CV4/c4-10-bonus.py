@@ -11,7 +11,16 @@ def getSecondMax(n):
         elif (num > max):
             secondMax = max
             max = num
-            
+
     return secondMax
 
-print(getSecondMax(4))
+while(True):
+    try:
+        n = input("How many numbers do you want to enter?\n(type \'e\' for end)\n> ")
+        if (n == 'e'):
+            break 
+        print(str(getSecondMax(int(n))) + "\n")
+    except ValueError as e:
+        print("\nInvalid input.\n")
+    except KeyboardInterrupt as e:
+        break

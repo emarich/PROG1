@@ -1,6 +1,5 @@
 import turtle
 import math
-import random
 
 # global variables - angles
 fullCircle = 360
@@ -13,75 +12,86 @@ scorpionGrassBlue = "#76A6FA"
 sunflowerYellow = "#F6A90F"
 
 # move the turtle to a position [x,y]
-def moveTurtle(t, x, y):
-    t.penup()
-    t.goto((x, y))
-    t.pendown()
+def moveTurtle(turtle, x, y):
+    turtle.penup()
+    turtle.goto((x, y))
+    turtle.pendown()
 
-# draw a circle
-def polygon(t, len, n, angle):
+def polygon(turtle, len, n, angle):
     polAngle = fullCircle/n
     drawAngle = int(n / (fullCircle / angle))
     for i in range(drawAngle):
-        t.forward(len)
-        t.left(polAngle)
+        turtle.forward(len)
+        turtle.left(polAngle)
 
-# draw a part of circle
-def arc(t, r, angle):
-    circumference = 2 * math.pi * r
-    len = circumference / r
+# draw a part of a circle
+def arc(turtle, radius, angle):
+    circumference = 2 * math.pi * radius
+    len = circumference / radius
     n = int((circumference / len))
-    polygon(t, len, n, angle)
+    polygon(turtle, len, n, angle)
 
-def drawPetal(t, r, angle):
-    arc(t, r, angle)
-    t.left(halfCircle - angle)
-    arc(t, r, angle)
-
-def drawStem(t, r, turtleAngle):
-    t.setheading((halfCircle + quarterCircle) - turtleAngle/16)
-    arc(t, 550 - r, turtleAngle / 8)
-
-def drawBase(t, r, petalAngle, turtleAngle):
-    t.color(leafGreen)
-    drawStem(t, r, turtleAngle)
-    # leafs
-    randAngle = random.randint(0, int(quarterCircle/4))
-    t.setheading(quarterCircle + randAngle + int(petalAngle / 2))
-    drawPetal(t, 300 - r, quarterCircle - petalAngle)
-    t.setheading(int(petalAngle / 2) - randAngle)
-    drawPetal(t, 300 - r, quarterCircle - petalAngle)
+def drawPetal(turtle, radius, angle):
+    arc(turtle, radius, angle)
+    turtle.left(halfCircle - angle)
+    arc(turtle, radius, angle)
 
 '''
-petalAngle = an angle that defines part of the circle, which will be representing half of the petal/leaf
+turtle = an instance of the turtle
+radius = radius of circle, which will be representing half of the petal
+numPetals = number of petals
+petalAngle = an angle that defines part of the circle, which will be representing half of the petal
 turtleAngle = turtle's rotation angle after drawing a petal
+color = color of the turtle pen, default colo is black
 '''
-def drawFlower(t, r, numPetals, petalAngle, turtleAngle):
+def drawFlower(turtle, radius, numPetals, petalAngle, turtleAngle, color="black"):
+    turtle.color(color)
     for i in range(numPetals):
-        drawPetal(t, r, petalAngle)
-        t.left(turtleAngle)
+        drawPetal(turtle, radius, petalAngle)
+        turtle.left(turtleAngle)
 
-    drawBase(t, r, petalAngle, turtleAngle)
+def drawStem(turtle, radius, stemAngle, color=leafGreen):
+    turtle.color(color)
+    turtle.setheading((halfCircle + quarterCircle) - stemAngle/2)
+    arc(turtle, radius, stemAngle)
+
+'''
+turtle = an instance of the turtle
+radius = radius of circle, which will be representing half of the leaf
+turtleAngle = turtle's rotation angle after drawing a leaf
+leafAngle = an angle that defines part of the circle, which will be representing half of the leaf
+'''
+def drawLeafs(turtle, radius, turtleAngle, leafAngle, color=leafGreen):
+    turtle.color(color)
+    turtle.setheading(turtleAngle)
+    drawPetal(turtle, radius, leafAngle)
+    turtle.setheading(halfCircle - turtleAngle - (leafAngle*0.8))
+    drawPetal(turtle, radius, leafAngle)
 
 def main():
     t = turtle.Turtle()
     t.speed(0)
-    r = 100 # general radius of arc circles
 
+    # flower 1
     moveTurtle(t, -200, 100)
     numPetals = 7
-    t.color(roseRed)
-    drawFlower(t, r, numPetals, fullCircle/numPetals, halfCircle)
+    drawFlower(t, 100, numPetals, fullCircle/numPetals, halfCircle, roseRed)
+    drawStem(t, 130, 90)
+    drawLeafs(t, 130, 10, 30)
 
+    # flower 2
     moveTurtle(t, 0, 100)
     numPetals = 10
-    t.color(scorpionGrassBlue)
-    drawFlower(t, r/2, numPetals, fullCircle/numPetals*2, fullCircle)
+    drawFlower(t, 50, numPetals, fullCircle/numPetals*2, fullCircle, scorpionGrassBlue)
+    drawStem(t, 450, 40)
+    drawLeafs(t, 500, 65, 15)
 
+    # flower 3
     moveTurtle(t, 200, 100)
     numPetals = 20
-    t.color(sunflowerYellow)
-    drawFlower(t, r*2, numPetals, fullCircle/numPetals, halfCircle)
+    drawFlower(t, 200, numPetals, fullCircle/numPetals, halfCircle, sunflowerYellow)
+    drawStem(t, 250, 40)
+    drawLeafs(t, 100, 20, 80)
 
     t.hideturtle()
     turtle.done()
