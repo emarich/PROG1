@@ -2,7 +2,7 @@
 e = even = True     e + e = e
 o = odd = False     e + o = o
                     o + o = e
-                    o + e = 0      
+                    o + e = o      
                     (XNOR)
 """
 def isSumInputEven(n):
