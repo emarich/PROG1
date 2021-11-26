@@ -1,0 +1,1 @@
+# toto sa mi nechce robit
