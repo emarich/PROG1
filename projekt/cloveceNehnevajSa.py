@@ -8,8 +8,7 @@ class Pawn:
         self.pos = {} # actual pawn position
         self.prevPos = {} # previous pawn position
         self.char = playerChar # representative character on the gamefield
-        self.isStartHome = True # flag if pawn is in starting home field
-        self.isField = False # flag if pawn is on gamefield (not on home fields)
+        self.onField = False # flag if pawn is on gamefield (not on home fields)
         self.isFinalHome = False # flag if pawn is in final home field
 
 class Player:
@@ -32,12 +31,11 @@ class Player:
         for i in range(int((gamefield.n - 3)/2)):
             self.pawns.append(Pawn(self.char))
 
-    def putOnField(self, gamefield, pawnNum, pos, prevPos): # move pawn from starting home to gamefield
-        self.pawns[pawnNum].pos = pos.copy()
-        self.pawns[pawnNum].prevPos = prevPos.copy()
-        gamefield.field[pos["x"]][pos["y"]] = self.char
-        self.pawns[pawnNum].isStartHome = False
-        self.pawns[pawnNum].isField = True
+    def putOnField(self, gamefield, pawnNum): # move pawn from starting home to gamefield
+        self.pawns[pawnNum].pos = self.spawnPos.copy()
+        self.pawns[pawnNum].prevPos = self.prevSpawnPos.copy()
+        gamefield.field[self.spawnPos["x"]][self.spawnPos["y"]] = self.char
+        self.pawns[pawnNum].onField = True
 
     def move(self, gamefield, pawnNum, nextPos, prevPos): # move pawn on field
         gamefield.field[self.pawns[pawnNum].pos["x"]][self.pawns[pawnNum].pos["y"]] = fieldChar
@@ -49,8 +47,8 @@ class Player:
         gamefield.field[self.pawns[pawnNum].pos["x"]][self.pawns[pawnNum].pos["y"]] = fieldChar
         self.pawns[pawnNum].pos = nextPos.copy()
         gamefield.field[nextPos["x"]][nextPos["y"]] = self.char
-        self.pawns[pawnNum].isField = False
-        self.pawns[pawnNum].isFinalHome = True
+        self.pawns[pawnNum].onField = False
+        self.pawns[pawnNum].onFinalHome = True
 
 class Gamefield:
     def __init__(self, n, field) -> None:
@@ -138,7 +136,7 @@ def play1Player(gamefield):
     # put pawn on field
     pos = player1.spawnPos.copy()
     prevPos = player1.prevSpawnPos.copy()
-    player1.putOnField(gamefield, 0, pos, prevPos)
+    player1.putOnField(gamefield, 0)
     tlacsachovnicu(gamefield)
 
     onField = True
@@ -150,7 +148,7 @@ def play1Player(gamefield):
         while diceRoll != 0:
             pos, prevPos = moveToNextPos(gamefield, pos, prevPos)
 
-            if (pos == player1.spawnPos):
+            if (pos == player1.spawnPos): # if pawn is before final home
                 if (diceRoll > len(player1.pawns)):
                     print("~~~~~ Ak sa chcete dostat do domceka, hodte menej")
                     pos = player1.pawns[0].pos.copy()
@@ -169,17 +167,73 @@ def play1Player(gamefield):
             print("⊱ Gratulujem, hrac A je v domceku ⊰")
         tlacsachovnicu(gamefield)
 
-def play2Players(gamefield):
-    player1 = Player(1, gamefield)
-    player2 = Player(2, gamefield)
+def checkPawnOnField(player): # if pawn is on field, return index of pawn, otherwise -1
+    onFieldFlags = [pawn.onField for pawn in player.pawn]
+    if (True not in onFieldFlags):
+        return -1
+    else:
+        return onFieldFlags.index(True)
 
-    # put pawns on field
-    pos1 = player1.spawnPos.copy()
-    prevPos1 = player1.prevSpawnPos.copy()
-    pos2 = player2.spawnPos.copy()
-    prevPos2 = player2.prevSpawnPos.copy()
+def getPawnIndexFromStartHome(player):
+    for pawn in player.pawns:
+        if (pawn.onField == False and pawn.isFinalHome == False):
+            return player.pawns.index(pawn)
+
+def otherPlayerNum(playerNum):
+    return (playerNum % 2) + 1
+
+def rollDiceAgain():
+    sum = 0
+    while True:
+        newDiceRoll = rollDice()
+        sum += newDiceRoll
+        if (newDiceRoll != 6):
+            return sum
+
+
+def play2Players(gamefield):
+    player = {1: Player(1, gamefield), 2: Player(2, gamefield)}
+    pos = {1: player[1].spawnPos.copy(), 2: player[2].spawnPos.copy()}
+    prevPos = {1: player[1].prevSpawnPos.copy(), 2: player[2].prevSpawnPos.copy()}
     tlacsachovnicu(gamefield)
-    onField = True
+
+    noWinner = True
+    playerNum = 1
+    
+    while noWinner:
+        diceRoll = rollDice()
+        print("~~~~~ Hrac " + player[playerNum].char + " hodil " + str(diceRoll) + " ~~~~~")
+
+        pawnIndex = checkPawnOnField(player[playerNum])
+        if (pawnIndex == -1): # no pawn on field
+            if (diceRoll == 6):
+                player[playerNum].putOnField(gamefield, getPawnIndexFromStartHome(player[playerNum]))
+            playerNum = otherPlayerNum(playerNum)
+            continue
+        else:
+            if (diceRoll == 6):
+                diceRoll = rollDiceAgain()
+            print("~~~~~ Hrac " + player[playerNum].char + " hodil " + str(diceRoll) + " ~~~~~")
+            while diceRoll != 0:
+                pos[playerNum], prevPos[playerNum] = moveToNextPos(gamefield, pos[playerNum], prevPos[playerNum])
+
+                if (pos[playerNum] == player[playerNum].spawnPos): # if pawn is before final home
+                    if (diceRoll > len(player[playerNum].pawns)):
+                        print("~~~~~ Ak sa chcete dostat do domceka, hodte menej")
+                        pos[playerNum] = player[playerNum].pawns[0].pos.copy()
+                        prevPos[playerNum] = player[playerNum].pawns[0].prevPos.copy()
+                        break
+                    pos[playerNum] = moveToFinalHome(gamefield, prevPos[playerNum], diceRoll)
+                    break
+
+                diceRoll -= 1
+
+            if (onField):
+                player1.move(gamefield, 0, pos, prevPos)
+            else:
+                player1.moveToFinalHome(gamefield, 0, pos)
+                print("⊱ Gratulujem, hrac A je v domceku ⊰")
+            tlacsachovnicu(gamefield)
 
 
 # main function
