@@ -1,8 +1,0 @@
-sucet=0
-i=1
-while true:
-   i=i+1
-   sucet=sucet+i
-   if sucet>=7:
-      break
-print(i)

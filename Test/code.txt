@@ -1,0 +1,10 @@
+i=1
+While _True:
+i=—i+ 1
+sucet—sucet+i
+if sucet>=+>/:
+break
+
+Print(i)
+
+ 
