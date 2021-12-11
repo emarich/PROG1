@@ -1,13 +1,12 @@
 import random
 
-fieldChar = "*"
-homeChar = "D"
+fieldChar = "*" # character representing normal field on gamefield
+homeChar = "D" # character representing final home field on gamefield
 
 class Pawn:
-    def __init__(self, playerChar):
+    def __init__(self):
         self.pos = {} # actual pawn position
         self.prevPos = {} # previous pawn position
-        self.char = playerChar # representative character on the gamefield
         self.onField = False # flag if pawn is on gamefield (not on home fields)
         self.onFinalHome = False # flag if pawn is in final home field
 
@@ -28,8 +27,8 @@ class Player:
             self.spawnPos = {"x": gamefield.n, "y": halfN-1}
             self.prevSpawnPos = {"x": gamefield.n, "y": halfN}
 
-        for i in range(int((gamefield.n - 3)/2)):
-            self.pawns.append(Pawn(self.char))
+        for i in range(getFinalHomeNum(gamefield.n)):
+            self.pawns.append(Pawn())
 
     def putOnField(self, gamefield, pawnNum): # move pawn from starting home to gamefield
         self.pawns[pawnNum].pos = self.spawnPos.copy()
@@ -51,10 +50,10 @@ class Player:
         self.pawns[pawnNum].onFinalHome = True
 
 class Gamefield:
-    def __init__(self, n, field, finalHomes) -> None:
+    def __init__(self, n, field, finalHomesPos) -> None:
         self.n = n # size od field
         self.field = field # 2d array gamefield representation
-        self.finalHomes = finalHomes # positions of final hoem fields
+        self.finalHomesPos = finalHomesPos # positions of final home fields
 
 # generate gamefield
 def gensachovnicu(n):
@@ -90,6 +89,10 @@ def tlacsachovnicu(gamefield):
         print()    
     print()
 
+# returns number of homes for single player
+def getFinalHomeNum(n):
+    return int((n - 3)/2)
+
 # random 6-side dice rolling (numbers from 1 to 6)
 def rollDice():
     return random.randint(1, 6)
@@ -104,13 +107,32 @@ def rollDiceAgain(player):
         if (newDiceRoll != 6):
             return sumRolls
 
+# if pawn is on field, return index of pawn, otherwise -1
+def getPawnIndexOnField(player):
+    for i, pawn in enumerate(player.pawns):
+        if (pawn.onField):
+            return i
+    return -1
+
+
+def getPawnIndexFromStartHome(player):
+    for i, pawn in enumerate(player.pawns):
+        if (pawn.onField == False and pawn.onFinalHome == False):
+            return i
+
+
+def changePlayer(playerNum, maxNumPlayers):
+    return (playerNum % maxNumPlayers) + 1
+
+
 def canGoNextPos(gamefield, nextPos, prevPos): # check if pawn can go in nextPos position
-    if (nextPos["x"] <= gamefield.n and nextPos["y"] <= gamefield.n and
-        nextPos not in gamefield.finalHomes and         
+    if (1 <= nextPos["x"] <= gamefield.n and 1 <= nextPos["y"] <= gamefield.n and
+        nextPos not in gamefield.finalHomesPos and         
         nextPos != prevPos and
         gamefield.field[nextPos["x"]][nextPos["y"]] in (fieldChar, "A", "B")):
         return True
     return False
+
 
 def moveToNextPos(gamefield, pos, prevPos):
     if (canGoNextPos(gamefield, {"x": pos["x"]+1, "y": pos["y"]}, prevPos)):
@@ -127,11 +149,13 @@ def moveToNextPos(gamefield, pos, prevPos):
         pos["y"] -= 1
     return pos, prevPos
 
+
 def canGoFinalHome(gamefield, nextPos):
-    if (nextPos["x"] <= gamefield.n and nextPos["y"] <= gamefield.n and
+    if (1 <= nextPos["x"] <= gamefield.n and 1 <= nextPos["y"] <= gamefield.n and
         gamefield.field[nextPos["x"]][nextPos["y"]] == homeChar):
         return True
     return False
+
 
 def moveToFinalHome(gamefield, pos, diceRoll):
     if (canGoFinalHome(gamefield, {"x": pos["x"]+diceRoll, "y": pos["y"]})):
@@ -148,21 +172,6 @@ def moveToFinalHome(gamefield, pos, diceRoll):
         return True
     return False
 
-# if pawn is on field, return index of pawn, otherwise -1
-def getPawnOnField(player):
-    for i, pawn in enumerate(player.pawns):
-        if (pawn.onField):
-            return i
-    return -1
-
-def getPawnFromStartHome(player):
-    for i, pawn in enumerate(player.pawns):
-        if (pawn.onField == False and pawn.onFinalHome == False):
-            return i
-
-# returns number of other player
-def otherPlayerTurn(playerNum, maxNumPlayers):
-    return (playerNum % maxNumPlayers) + 1
 
 def isFinalHomeFull(player):
     for pawn in player.pawns:
@@ -170,22 +179,24 @@ def isFinalHomeFull(player):
             return False
     return True
 
-def play(maxPlayers, gamefield):
+
+def play(maxPlayersNum, gamefield):
     player = {}
     pos = {}
     prevPos = {}
-
-    for i in range(1, maxPlayers+1):
-        player[i] = Player(i, gamefield)
-
-    countTurns = 0
     noWinner = True
+    countTurns = 0
     playerNum = 1
 
+    for i in range(1, maxPlayersNum+1):
+        player[i] = Player(i, gamefield)
+    
     # if there is only 1 player, player will have only 1 pawn and it is put directly on field
-    if (maxPlayers == 1):
+    if (maxPlayersNum == 1):
         player[playerNum].pawns = [player[playerNum].pawns[0]]
         player[playerNum].putOnField(gamefield, 0)
+        pos[playerNum] = player[playerNum].spawnPos.copy()
+        prevPos[playerNum] = player[playerNum].prevSpawnPos.copy()
 
     tlacsachovnicu(gamefield)
     
@@ -194,15 +205,15 @@ def play(maxPlayers, gamefield):
         print(f"~~~~~ Hrac {player[playerNum].char} hodil {diceRoll} ~~~~~")
         countTurns += 1
 
-        pawnIndex = getPawnOnField(player[playerNum])
+        pawnIndex = getPawnIndexOnField(player[playerNum])
         # no pawn on field
         if (pawnIndex == -1):
-            if (diceRoll == 6): # if player rolled 6 on dice, put pawn from start home
-                player[playerNum].putOnField(gamefield, getPawnFromStartHome(player[playerNum]))
+            if (diceRoll == 6): # if player rolled 6 on dice, put pawn on field
+                player[playerNum].putOnField(gamefield, getPawnIndexFromStartHome(player[playerNum]))
                 pos[playerNum] = player[playerNum].spawnPos.copy()
                 prevPos[playerNum] = player[playerNum].prevSpawnPos.copy()
                 tlacsachovnicu(gamefield)
-            playerNum = otherPlayerTurn(playerNum, maxPlayers)
+            playerNum = changePlayer(playerNum, maxPlayersNum)
             continue
         # one pawn on field
         else:
@@ -211,25 +222,24 @@ def play(maxPlayers, gamefield):
                 
             while diceRoll != 0:
                 if (pos[playerNum] == player[playerNum].prevSpawnPos): # if pawn is before final home
-                    if (diceRoll > int((gamefield.n - 3)/2)):
+                    if (diceRoll > getFinalHomeNum(gamefield.n)):
                         print("      Hod menej, aby si sa dostal do domceka")
                         pos[playerNum] = player[playerNum].pawns[pawnIndex].pos.copy()
                         prevPos[playerNum] = player[playerNum].pawns[pawnIndex].prevPos.copy()
-                        break
-                    if (moveToFinalHome(gamefield, pos[playerNum], diceRoll)):
+                    elif (moveToFinalHome(gamefield, pos[playerNum], diceRoll)):
                         player[playerNum].moveToFinalHome(gamefield, pawnIndex, pos[playerNum])
                     break
 
-                (pos[playerNum], prevPos[playerNum]) = moveToNextPos(gamefield, pos[playerNum], prevPos[playerNum]) # change pos and prevPos
+                (pos[playerNum], prevPos[playerNum]) = moveToNextPos(gamefield, pos[playerNum], prevPos[playerNum]) # get next position of field for pawn
 
                 diceRoll -= 1
 
-            player[playerNum].move(gamefield, pawnIndex, pos[playerNum], prevPos[playerNum])
+            player[playerNum].move(gamefield, pawnIndex, pos[playerNum], prevPos[playerNum]) # move pawn to next field
 
             if (isFinalHomeFull(player[playerNum])):
                 noWinner = False
             else:
-                playerNum = otherPlayerTurn(playerNum, maxPlayers)
+                playerNum = changePlayer(playerNum, maxPlayersNum)
                 
             tlacsachovnicu(gamefield)
             
@@ -241,24 +251,30 @@ def main():
     print("\nHraj Clovece, nehnevaj sa!\n")
 
     # user enters size for gamefield
-    n = 13 # 4
-    while n % 2 == 0 and n < 5:
+    n = 0
+    while n % 2 == 0 or n < 5:
         try:
             n = int(input("Zadaj velkost sachovnice (cislo ma byt neparne a >= 5): "))
         except:
             print("Zadal si zly format.")
 
     # user enters number of players
-    playersNum = 2 # None
-    while playersNum not in (1, 2):
+    maxPlayersNum = None
+    while maxPlayersNum not in (0, 1, 2):
         try:
-            playersNum = int(input("Zadaj pocet hracov (1 alebo 2): "))
+            maxPlayersNum = int(input("Zadaj pocet hracov (1 alebo 2)(ak zadas 0, vypise sa iba sachovnica): "))
         except:
-            print("Zadal si zly format.")
+            print("\nZadal si zly format.")
+    print()
 
     # generate gamefield
     gamefield = gensachovnicu(n)
 
-    play(playersNum, gamefield)
+    if (maxPlayersNum == 0):
+        tlacsachovnicu(gamefield)
+        return
+
+    play(maxPlayersNum, gamefield)
+
 
 main()
