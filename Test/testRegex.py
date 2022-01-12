@@ -1,6 +1,6 @@
 import re # for regex
 
-# text file with fucked up code from AIS exam
+# text file with fucked up code
 codeTxt = r"C:\Users\emari\Desktop\projects\PROG1\Test\code.txt"
 # when error occurres during edited code execution, save edited code to this file
 codePy = r"C:\Users\emari\Desktop\projects\PROG1\Test\new_code.py"
